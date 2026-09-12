@@ -10,15 +10,13 @@ from langgraph_agent import run_complaint_pipeline
 import models
 from schemas import ComplaintInput, ComplaintOut, ComplaintSaveRequest
 
-# Create tables on startup if they don't exist yet
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AIVOA Complaint Management API")
 
-# Allow the React dev server to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,20 +30,12 @@ def health_check():
 
 @app.post("/api/complaint/parse")
 def parse_complaint(payload: ComplaintInput):
-    """
-    Takes raw complaint text (pasted email, or extracted PDF/OCR text)
-    and returns structured fields + AI risk assessment + CAPA recommendation.
-    """
     result = run_complaint_pipeline(payload.text)
     return result
 
 
 @app.post("/api/complaint/upload")
 async def upload_complaint(file: UploadFile = File(...)):
-    """
-    Accepts a PDF, .eml email, or .txt file, extracts its text,
-    then runs it through the same AI pipeline as /parse.
-    """
     file_bytes = await file.read()
     try:
         raw_text = extract_text_from_upload(file.filename, file_bytes)
@@ -62,7 +52,6 @@ async def upload_complaint(file: UploadFile = File(...)):
 
 @app.post("/api/complaint/save", response_model=ComplaintOut)
 def save_complaint(payload: ComplaintSaveRequest, db: Session = Depends(get_db)):
-    """Persists the reviewed/edited complaint form to the database."""
     record = models.Complaint(
         **payload.fields.model_dump(),
         risk_level=payload.risk_level,
@@ -79,7 +68,6 @@ def save_complaint(payload: ComplaintSaveRequest, db: Session = Depends(get_db))
 
 @app.get("/api/complaint", response_model=List[ComplaintOut])
 def list_complaints(db: Session = Depends(get_db)):
-    """Lists all saved complaints, most recent first — for a dashboard view."""
     return db.query(models.Complaint).order_by(models.Complaint.id.desc()).all()
 
 
@@ -89,8 +77,3 @@ def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404, detail="Complaint not found")
     return record
-
-
-# TODO (further bonus ideas, optional):
-# - Duplicate Complaint Detection: before /save, query existing complaints with
-#   matching product_name + batch_number and flag as a possible duplicate.

@@ -1,16 +1,9 @@
 """
 AIVOA Complaint Extraction Agent
---------------------------------
-A minimal LangGraph graph with a single node that:
-  1. Takes raw complaint text (pasted email / OCR'd PDF text / manual text)
-  2. Asks the Groq LLM (gemma2-9b-it) to extract structured fields
-  3. Returns clean JSON matching the "Log Customer Complaint" form fields
-
-Run standalone for testing:
-    python langgraph_agent.py
 """
 
 import os
+import re
 import json
 from typing import TypedDict, Optional
 
@@ -20,9 +13,7 @@ from langgraph.graph import StateGraph, END
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# 1. Define the shared state that flows through the graph
-# ---------------------------------------------------------------------------
+
 class ComplaintState(TypedDict):
     raw_text: str
     extracted: Optional[dict]
@@ -30,14 +21,27 @@ class ComplaintState(TypedDict):
     capa: Optional[dict]
 
 
-# ---------------------------------------------------------------------------
-# 2. Set up the LLM
-# ---------------------------------------------------------------------------
 llm = ChatGroq(
-    model="gemma2-9b-it",
+    model="openai/gpt-oss-20b",
     temperature=0,
     api_key=os.getenv("GROQ_API_KEY"),
 )
+
+
+def parse_json_response(text: str) -> dict:
+    """Robustly extract a JSON object from a model response, even if
+    it's wrapped in markdown fences or has extra commentary around it."""
+    text = text.strip()
+    text = re.sub(r"^```(?:json)?", "", text).strip()
+    text = re.sub(r"```$", "", text).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        raise
+
 
 EXTRACTION_PROMPT = """You are a pharmaceutical QMS assistant. Extract structured
 complaint data from the customer complaint text below.
@@ -95,67 +99,43 @@ Risk assessment:
 """
 
 
-# ---------------------------------------------------------------------------
-# 3. Define graph nodes
-# ---------------------------------------------------------------------------
 def extract_node(state: ComplaintState) -> ComplaintState:
     prompt = EXTRACTION_PROMPT.format(text=state["raw_text"])
     response = llm.invoke(prompt)
-    try:
-        data = json.loads(response.content)
-    except json.JSONDecodeError:
-        # Fallback: try to strip code fences if the model added them anyway
-        cleaned = response.content.strip().strip("`").replace("json\n", "", 1)
-        data = json.loads(cleaned)
-    state["extracted"] = data
+    state["extracted"] = parse_json_response(response.content)
     return state
 
 
 def risk_node(state: ComplaintState) -> ComplaintState:
     prompt = RISK_PROMPT.format(data=json.dumps(state["extracted"]))
     response = llm.invoke(prompt)
-    try:
-        risk = json.loads(response.content)
-    except json.JSONDecodeError:
-        cleaned = response.content.strip().strip("`").replace("json\n", "", 1)
-        risk = json.loads(cleaned)
-    state["risk_assessment"] = risk
+    state["risk_assessment"] = parse_json_response(response.content)
     return state
 
 
 def capa_node(state: ComplaintState) -> ComplaintState:
-    """Bonus feature: CAPA (Corrective and Preventive Action) recommendation."""
     prompt = CAPA_PROMPT.format(
         data=json.dumps(state["extracted"]),
         risk=json.dumps(state["risk_assessment"]),
     )
     response = llm.invoke(prompt)
-    try:
-        capa = json.loads(response.content)
-    except json.JSONDecodeError:
-        cleaned = response.content.strip().strip("`").replace("json\n", "", 1)
-        capa = json.loads(cleaned)
-    state["capa"] = capa
+    state["capa"] = parse_json_response(response.content)
     return state
 
 
-# ---------------------------------------------------------------------------
-# 4. Wire up the graph: extract -> risk -> capa -> end
-# ---------------------------------------------------------------------------
 graph = StateGraph(ComplaintState)
 graph.add_node("extract", extract_node)
 graph.add_node("risk", risk_node)
-graph.add_node("capa", capa_node)
+graph.add_node("generate_capa", capa_node)
 graph.set_entry_point("extract")
 graph.add_edge("extract", "risk")
-graph.add_edge("risk", "capa")
-graph.add_edge("capa", END)
+graph.add_edge("risk", "generate_capa")
+graph.add_edge("generate_capa", END)
 
 complaint_graph = graph.compile()
 
 
 def run_complaint_pipeline(raw_text: str) -> dict:
-    """Convenience wrapper used by FastAPI."""
     result = complaint_graph.invoke(
         {"raw_text": raw_text, "extracted": None, "risk_assessment": None, "capa": None}
     )
@@ -166,13 +146,9 @@ def run_complaint_pipeline(raw_text: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Standalone test
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     sample = """Apollo Pharmacy reported discolored capsules in Amoxicillin
     Capsules 500 mg. Batch number AMX240602. Manufacturing date March 2026.
-    Expiry date February 2028. 12 capsules affected. Please log this complaint."""
-
+    Expiry date February 2028. 12 capsules affected."""
     output = run_complaint_pipeline(sample)
     print(json.dumps(output, indent=2))

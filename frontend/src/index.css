@@ -1,0 +1,194 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: #f7f8fa;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+}
+
+.complaint-form {
+  flex: 1.4;
+  padding: 32px 40px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.complaint-form h2 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin-top: 0;
+}
+
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.copilot-panel {
+  flex: 1;
+  background: #fafbfc;
+  border-left: 1px solid #e5e7eb;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  margin: 16px 0;
+}
+
+.message {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  max-width: 90%;
+}
+
+.message.assistant {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.message.user {
+  background: #4f46e5;
+  color: #fff;
+  margin-left: auto;
+}
+
+.risk-card {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.input-row button {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.copilot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.status-badge.status-under-review {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-saved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.message.loading {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.capa-card {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.capa-card p {
+  margin: 4px 0;
+}
+
+.save-button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-row {
+  margin-bottom: 8px;
+}
+
+.upload-button {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px dashed #9ca3af;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.upload-button:hover {
+  background: #f3f4f6;
+}

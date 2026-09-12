@@ -1,3 +1,7 @@
+cd /workspaces/aivoa-complaint-system/frontend
+fuser -k 5173/tcp 2>/dev/null
+sleep 2
+npm run dev
 * {
   box-sizing: border-box;
 }

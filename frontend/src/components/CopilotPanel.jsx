@@ -9,7 +9,7 @@ import {
   setSavedId,
 } from '../slices/complaintSlice.js'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = 'https://effective-waffle-9q95rrr67gr2x7x4-8000.app.github.dev'
 
 export default function CopilotPanel() {
   const dispatch = useDispatch()
